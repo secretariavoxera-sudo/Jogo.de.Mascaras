@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Users, Play, Trophy, RotateCcw } from 'lucide-react';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 
 interface Player {
   name: string;
@@ -43,6 +44,8 @@ const TOPICS = [
 ];
 
 export default function GameContainer() {
+  const { playApplause, playBoo, playVoteConfirm } = useSoundEffects();
+  
   const [phase, setPhase] = useState<GamePhase>('setup');
   const [players, setPlayers] = useState<Player[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -144,6 +147,9 @@ export default function GameContainer() {
     const voter = players[currentVoterIndex];
     setVotes([...votes, { voter: voter.name, target: selectedVoteTarget, role: selectedVoteRole }]);
 
+    // Tocar som de confirmação
+    playVoteConfirm();
+
     if (currentVoterIndex < players.length - 1) {
       setCurrentVoterIndex(currentVoterIndex + 1);
       setSelectedVoteTarget('');
@@ -157,10 +163,13 @@ export default function GameContainer() {
   const calculateResults = () => {
     const newScores: { [key: string]: number } = players.reduce((acc, p) => ({ ...acc, [p.name]: 0 }), {});
 
-    votes.forEach(vote => {
+    votes.forEach((vote, index) => {
       const realRole = roles.find(r => r.name === vote.target);
       if (realRole && realRole.role === vote.role) {
         newScores[vote.voter] = (newScores[vote.voter] || 0) + 2;
+        setTimeout(() => playApplause(), index * 400);
+      } else {
+        setTimeout(() => playBoo(), index * 400);
       }
     });
 
@@ -169,8 +178,10 @@ export default function GameContainer() {
       score: (p.score || 0) + (newScores[p.name] as number || 0)
     }));
 
-    setPlayers(updatedPlayers);
-    setPhase('results');
+    setTimeout(() => {
+      setPlayers(updatedPlayers);
+      setPhase('results');
+    }, votes.length * 400 + 2000);
   };
 
   // Recomeçar jogo
