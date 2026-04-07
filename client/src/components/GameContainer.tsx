@@ -3,7 +3,7 @@
  * Design: Teatralismo Dramático - Preto + Laranja + Ouro
  * Tipografia: Playfair Display (títulos) + Inter (corpo)
  * Sistema de Papéis: Debate (Defensor, Contestador, Mediador, Infiltrado)
- * Baseado no código original funcional
+ * Mecânica: Verdade Secreta - O Defensor defende uma verdade, o Contestador questiona, o Mediador sabe a verdade
  */
 
 import { useState } from 'react';
@@ -20,7 +20,7 @@ interface Role {
   role: string;
 }
 
-type GamePhase = 'setup' | 'chooseTheme' | 'pickStar' | 'showRoles' | 'discussion' | 'voting' | 'results';
+type GamePhase = 'setup' | 'chooseTheme' | 'pickStar' | 'chooseAnswer' | 'showRoles' | 'discussion' | 'voting' | 'results';
 
 const TOPICS = [
   'Trair é justificável?',
@@ -36,10 +36,10 @@ const TOPICS = [
 ];
 
 const ROLE_DESCRIPTIONS: { [key: string]: string } = {
-  '🎤 Defensor': 'Defende a verdade. Sabe a resposta correta e a deve defender durante o debate.',
+  '🎤 Defensor': 'Defende a verdade secreta. Sabe qual é a resposta correta e deve defendê-la durante o debate.',
   '🎤 Contestador': 'Questiona tudo. Tenta descobrir quem está a mentir através de perguntas inteligentes.',
-  '🤐 Mediador': 'Neutro e observador. Conhece todos os segredos e vota com base na lógica.',
-  '🎭 Infiltrado': 'O impostor! Finge ser Defensor mas é secretamente um Contestador. Engana todos!'
+  '🤐 Mediador': 'Neutro e observador. Conhece a verdade secreta e vota com base na lógica.',
+  '🎭 Infiltrado': 'O impostor! Finge ser Defensor mas defende o oposto da verdade. Engana todos!'
 };
 
 export default function GameContainer() {
@@ -50,6 +50,7 @@ export default function GameContainer() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [secretAnswer, setSecretAnswer] = useState<'SIM' | 'NÃO' | ''>('');
   const [star, setStar] = useState('');
   const [roles, setRoles] = useState<Role[]>([]);
   const [scores, setScores] = useState<{ [key: string]: number }>({});
@@ -95,17 +96,23 @@ export default function GameContainer() {
   // Escolher tema
   const chooseTheme = (topic: string) => {
     setSelectedTopic(topic);
+    setPhase('chooseAnswer');
+  };
+
+  // Escolher a verdade secreta
+  const chooseAnswer = (answer: 'SIM' | 'NÃO') => {
+    setSecretAnswer(answer);
     setPhase('pickStar');
   };
 
-  // Escolher estrela
+  // Escolher estrela (Defensor)
   const pickStar = () => {
     const randomStar = players[Math.floor(Math.random() * players.length)];
     setStar(randomStar.name);
     assignRoles(randomStar.name);
   };
 
-  // Atribuir papéis
+  // Atribuir papéis - Sistema Debate
   const assignRoles = (starName: string) => {
     const others = players
       .filter(p => p.name !== starName)
@@ -114,19 +121,22 @@ export default function GameContainer() {
     const newRoles: Role[] = [];
 
     if (players.length === 4) {
-      newRoles.push({ name: others[0].name, role: '🎤 Defensor' });
-      newRoles.push({ name: others[1].name, role: '🎤 Contestador' });
-      newRoles.push({ name: others[2].name, role: '🤐 Mediador' });
+      // Sistema Debate: Defensor, Contestador, Mediador, Infiltrado
+      newRoles.push({ name: starName, role: '🎤 Defensor' });
+      newRoles.push({ name: others[0].name, role: '🎤 Contestador' });
+      newRoles.push({ name: others[1].name, role: '🤐 Mediador' });
+      newRoles.push({ name: others[2].name, role: '🎭 Infiltrado' });
     } else if (players.length === 5) {
-      newRoles.push({ name: others[0].name, role: '🎤 Defensor' });
-      newRoles.push({ name: others[1].name, role: '🎤 Contestador' });
-      newRoles.push({ name: others[2].name, role: '🤐 Mediador' });
+      newRoles.push({ name: starName, role: '🎤 Defensor' });
+      newRoles.push({ name: others[0].name, role: '🎤 Contestador' });
+      newRoles.push({ name: others[1].name, role: '🤐 Mediador' });
+      newRoles.push({ name: others[2].name, role: '🎭 Infiltrado' });
       newRoles.push({ name: others[3].name, role: '🎭 Infiltrado' });
     } else {
-      newRoles.push({ name: others[0].name, role: '🎤 Defensor' });
-      newRoles.push({ name: others[1].name, role: '🎤 Contestador' });
-      newRoles.push({ name: others[2].name, role: '🤐 Mediador' });
-      for (let i = 3; i < others.length; i++) {
+      newRoles.push({ name: starName, role: '🎤 Defensor' });
+      newRoles.push({ name: others[0].name, role: '🎤 Contestador' });
+      newRoles.push({ name: others[1].name, role: '🤐 Mediador' });
+      for (let i = 2; i < others.length; i++) {
         newRoles.push({ name: others[i].name, role: '🎭 Infiltrado' });
       }
     }
@@ -149,53 +159,74 @@ export default function GameContainer() {
 
   // Começar votação
   const startVoting = () => {
-    setVotes([]);
     setVoteIndex(0);
     setSelectedTarget('');
+    setVotes([]);
     setPhase('voting');
   };
 
-  // Guardar voto
-  const saveVote = (target: string, role: string) => {
-    const voter = players[voteIndex];
-    const newVotes = [...votes, { voter: voter.name, target, role }];
-    setVotes(newVotes);
+  // Salvar voto
+  const saveVote = () => {
+    if (!selectedTarget) return;
+    
     playVoteConfirm();
-
+    const currentVoter = players[voteIndex];
+    const currentRole = roles.find(r => r.name === currentVoter.name)?.role || '';
+    
+    setVotes([...votes, { voter: currentVoter.name, target: selectedTarget, role: currentRole }]);
+    
     if (voteIndex < players.length - 1) {
       setVoteIndex(voteIndex + 1);
       setSelectedTarget('');
     } else {
-      calculateResults(newVotes);
+      calculateResults();
     }
   };
 
   // Calcular resultados
-  const calculateResults = (finalVotes: Array<{ voter: string; target: string; role: string }>) => {
+  const calculateResults = () => {
     const newScores = { ...scores };
-
-    finalVotes.forEach((vote, index) => {
-      const realRole = roles.find(r => r.name === vote.target);
-      if (realRole && realRole.role === vote.role) {
-        newScores[vote.voter] = (newScores[vote.voter] || 0) + 2;
-        setTimeout(() => playApplause(), index * 400);
+    
+    votes.forEach(vote => {
+      const targetRole = roles.find(r => r.name === vote.target)?.role || '';
+      const voterRole = vote.role;
+      
+      // Lógica de pontuação baseada na verdade secreta
+      if (targetRole === '🎭 Infiltrado') {
+        // Acertou em identificar o Infiltrado
+        playApplause();
+        newScores[vote.voter] = (newScores[vote.voter] || 0) + 1;
+      } else if (targetRole === '🎤 Defensor' && voterRole === '🎭 Infiltrado') {
+        // Infiltrado votou no Defensor (estratégia)
+        playApplause();
+        newScores[vote.voter] = (newScores[vote.voter] || 0) + 1;
       } else {
-        setTimeout(() => playBoo(), index * 400);
+        // Erro
+        playBoo();
       }
     });
 
-    setTimeout(() => {
-      setScores(newScores);
-      setPhase('results');
-    }, finalVotes.length * 400 + 2000);
+    // Bónus para Infiltrado não descoberto
+    roles.forEach(roleObj => {
+      if (roleObj.role === '🎭 Infiltrado') {
+        const wasVotedFor = votes.some(v => v.target === roleObj.name);
+        if (!wasVotedFor) {
+          newScores[roleObj.name] = (newScores[roleObj.name] || 0) + 2;
+        }
+      }
+    });
+
+    setScores(newScores);
+    setPhase('results');
   };
 
   // Recomeçar jogo
-  const resetGame = () => {
+  const restartGame = () => {
     setPhase('setup');
     setPlayers([]);
     setNewPlayerName('');
     setSelectedTopic('');
+    setSecretAnswer('');
     setStar('');
     setRoles([]);
     setScores({});
@@ -242,30 +273,27 @@ export default function GameContainer() {
                   type="text"
                   placeholder="Nome do jogador..."
                   value={newPlayerName}
-                  onChange={e => setNewPlayerName(e.target.value)}
-                  onKeyPress={e => e.key === 'Enter' && addPlayer()}
-                  className="flex-1 px-4 py-3 bg-input border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  onChange={(e) => setNewPlayerName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
+                  className="flex-1 px-4 py-2 bg-background border border-border rounded-lg text-foreground"
                 />
-                <Button
-                  onClick={addPlayer}
-                  className="bg-primary hover:bg-orange-600 text-white px-6 py-3"
-                >
+                <Button onClick={addPlayer} className="bg-orange-500 hover:bg-orange-600">
                   Adicionar
                 </Button>
               </div>
 
               {players.length > 0 && (
-                <div className="mb-6 p-4 bg-background rounded-lg border border-border">
+                <div className="mb-6 p-4 bg-background rounded-lg">
                   <p className="text-sm text-muted-foreground mb-3">Jogadores ({players.length})</p>
                   <div className="space-y-2">
                     {players.map((player, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-2 bg-card rounded">
-                        <span className="font-medium">{player.name}</span>
+                      <div key={idx} className="flex justify-between items-center p-2 bg-card rounded border border-border">
+                        <span>{player.name}</span>
                         <Button
                           onClick={() => removePlayer(idx)}
-                          variant="ghost"
-                          className="text-destructive hover:bg-destructive/10"
+                          variant="outline"
                           size="sm"
+                          className="text-red-500 hover:bg-red-500/10"
                         >
                           Remover
                         </Button>
@@ -275,16 +303,14 @@ export default function GameContainer() {
                 </div>
               )}
 
-              <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg mb-6">
-                <p className="text-sm text-muted-foreground">
-                  ℹ️ Mínimo 4 jogadores para começar
-                </p>
+              <div className="mb-6 p-3 bg-orange-500/20 border border-orange-500/50 rounded-lg text-sm">
+                ℹ️ Mínimo 4 jogadores para começar
               </div>
 
               <Button
                 onClick={startGame}
                 disabled={players.length < 4}
-                className="w-full bg-primary hover:bg-orange-600 text-white py-6 text-lg font-semibold disabled:opacity-50"
+                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 py-3 text-lg"
               >
                 ▶️ Começar Jogo
               </Button>
@@ -298,27 +324,54 @@ export default function GameContainer() {
   // CHOOSE THEME
   if (phase === 'chooseTheme') {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="container">
-          <div className="max-w-2xl mx-auto">
-            <Card className="bg-card border-border p-8">
-              <h2 className="text-4xl font-bold mb-8 text-center" style={{ fontFamily: 'Playfair Display' }}>
-                Escolhe o Tema
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {TOPICS.map((topic, idx) => (
-                  <Button
-                    key={idx}
-                    onClick={() => chooseTheme(topic)}
-                    className="bg-primary hover:bg-orange-600 text-white py-6 text-left justify-start h-auto"
-                  >
-                    {topic}
-                  </Button>
-                ))}
-              </div>
-            </Card>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <Card className="bg-card border-border p-8 max-w-2xl w-full">
+          <h2 className="text-4xl font-bold mb-8 text-center" style={{ fontFamily: 'Playfair Display' }}>
+            Escolhe o Tema
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            {TOPICS.map((topic, idx) => (
+              <Button
+                key={idx}
+                onClick={() => chooseTheme(topic)}
+                className="bg-orange-500 hover:bg-orange-600 text-white p-4 h-auto text-left"
+              >
+                {topic}
+              </Button>
+            ))}
           </div>
-        </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // CHOOSE ANSWER (Verdade Secreta)
+  if (phase === 'chooseAnswer') {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <Card className="bg-card border-border p-8 max-w-md w-full text-center">
+          <h2 className="text-3xl font-bold mb-6" style={{ fontFamily: 'Playfair Display' }}>
+            ⭐ Verdade Secreta
+          </h2>
+          <p className="text-xl text-orange-400 mb-8">{selectedTopic}</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            Escolhe a verdade secreta que o Defensor vai defender:
+          </p>
+          <div className="flex gap-4">
+            <Button
+              onClick={() => chooseAnswer('SIM')}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
+            >
+              ✅ SIM
+            </Button>
+            <Button
+              onClick={() => chooseAnswer('NÃO')}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 text-lg"
+            >
+              ❌ NÃO
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -326,83 +379,73 @@ export default function GameContainer() {
   // PICK STAR
   if (phase === 'pickStar') {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="container">
-          <div className="max-w-md mx-auto">
-            <Card className="bg-card border-border p-8 text-center">
-              <div className="text-6xl mb-6">⭐</div>
-              <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: 'Playfair Display' }}>
-                Tema
-              </h2>
-              <p className="text-xl text-primary font-semibold mb-8">{selectedTopic}</p>
-              <Button
-                onClick={pickStar}
-                className="w-full bg-primary hover:bg-orange-600 text-white py-6 text-lg font-semibold"
-              >
-                Continuar
-              </Button>
-            </Card>
-          </div>
-        </div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <Card className="bg-card border-border p-8 max-w-md w-full text-center">
+          <h2 className="text-3xl font-bold mb-6" style={{ fontFamily: 'Playfair Display' }}>
+            ⭐ Escolhendo Defensor...
+          </h2>
+          <p className="text-muted-foreground mb-8">O Defensor será escolhido aleatoriamente</p>
+          <Button
+            onClick={pickStar}
+            className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg"
+          >
+            Continuar
+          </Button>
+        </Card>
       </div>
     );
   }
 
   // SHOW ROLES
-  if (phase === 'showRoles') {
+  if (phase === 'showRoles' && roleIndex < roles.length) {
     const currentRole = roles[roleIndex];
-
-    if (!currentRole) {
-      return (
-        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-          <div className="container">
-            <div className="max-w-md mx-auto">
-              <Card className="bg-card border-border p-8 text-center">
-                <p className="text-gray-400">Carregando papéis...</p>
-              </Card>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    const roleDesc = ROLE_DESCRIPTIONS[currentRole.role] || '';
 
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="container">
-          <div className="max-w-md mx-auto">
-            <Card className="bg-card border-border p-8 text-center">
-              {!roleRevealed ? (
-                <>
-                  <h3 className="text-3xl font-bold mb-6" style={{ fontFamily: 'Playfair Display' }}>
-                    {currentRole.name}
-                  </h3>
-                  <p className="text-muted-foreground mb-6">Papel {roleIndex + 1} de {roles.length}</p>
-                  <Button
-                    onClick={() => setRoleRevealed(true)}
-                    className="w-full bg-primary hover:bg-orange-600 text-white py-6 text-lg font-semibold"
-                  >
-                    Ver Papel
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-2xl font-bold mb-4" style={{ fontFamily: 'Playfair Display' }}>
-                    {currentRole.name}
-                  </h3>
-                  <div className="text-6xl mb-4">{currentRole.role.split(' ')[0]}</div>
-                  <h2 className="text-3xl font-bold text-primary mb-4">{currentRole.role}</h2>
-                  <p className="text-gray-300 mb-8">{ROLE_DESCRIPTIONS[currentRole.role]}</p>
-                  <Button
-                    onClick={revealNextRole}
-                    className="w-full bg-primary hover:bg-orange-600 text-white py-6 text-lg font-semibold"
-                  >
-                    {roleIndex < roles.length - 1 ? 'Passar' : 'Começar Discussão'}
-                  </Button>
-                </>
-              )}
-            </Card>
-          </div>
-        </div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <Card className="bg-card border-border p-8 max-w-md w-full text-center">
+          <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: 'Playfair Display' }}>
+            {currentRole.name}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Papel {roleIndex + 1} de {roles.length}
+          </p>
+
+          {!roleRevealed ? (
+            <Button
+              onClick={() => setRoleRevealed(true)}
+              className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg mb-4"
+            >
+              Ver Papel
+            </Button>
+          ) : (
+            <>
+              <div className="mb-6 p-6 bg-background rounded-lg border-2 border-orange-500">
+                <p className="text-4xl mb-3">{currentRole.role.split(' ')[0]}</p>
+                <p className="text-2xl font-bold text-orange-400 mb-3">
+                  {currentRole.role.split(' ').slice(1).join(' ')}
+                </p>
+                <p className="text-sm text-muted-foreground">{roleDesc}</p>
+                {currentRole.role === '🎤 Defensor' && (
+                  <p className="text-lg font-bold text-green-400 mt-4">
+                    Verdade Secreta: {secretAnswer}
+                  </p>
+                )}
+                {currentRole.role === '🤐 Mediador' && (
+                  <p className="text-lg font-bold text-blue-400 mt-4">
+                    Verdade Secreta: {secretAnswer}
+                  </p>
+                )}
+              </div>
+              <Button
+                onClick={revealNextRole}
+                className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg"
+              >
+                {roleIndex === roles.length - 1 ? 'Começar Discussão' : 'Passar'}
+              </Button>
+            </>
+          )}
+        </Card>
       </div>
     );
   }
@@ -410,150 +453,113 @@ export default function GameContainer() {
   // DISCUSSION
   if (phase === 'discussion') {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="container">
-          <div className="max-w-md mx-auto">
-            <Card className="bg-card border-border p-8 text-center">
-              <h2 className="text-3xl font-bold mb-6" style={{ fontFamily: 'Playfair Display' }}>
-                Discussão
-              </h2>
-              <p className="text-xl text-muted-foreground mb-8">Tema: {selectedTopic}</p>
-              <p className="text-lg mb-8">Comecem a discutir! 😄</p>
-              <Button
-                onClick={startVoting}
-                className="w-full bg-primary hover:bg-orange-600 text-white py-6 text-lg font-semibold"
-              >
-                ▶️ Ir Votar
-              </Button>
-            </Card>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <Card className="bg-card border-border p-8 max-w-2xl w-full">
+          <h2 className="text-4xl font-bold mb-6 text-center" style={{ fontFamily: 'Playfair Display' }}>
+            💬 Discussão
+          </h2>
+          <div className="mb-8 p-6 bg-background rounded-lg border border-border">
+            <p className="text-xl text-orange-400 mb-4 font-bold">Tema:</p>
+            <p className="text-2xl mb-6">{selectedTopic}</p>
+            <p className="text-sm text-muted-foreground">
+              O Defensor defende a verdade secreta. O Contestador questiona. O Mediador observa. O Infiltrado tenta enganar!
+            </p>
           </div>
-        </div>
+          <Button
+            onClick={startVoting}
+            className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg"
+          >
+            🗳️ Ir Votar
+          </Button>
+        </Card>
       </div>
     );
   }
 
   // VOTING
-  if (phase === 'voting') {
+  if (phase === 'voting' && voteIndex < players.length) {
     const currentVoter = players[voteIndex];
-
-    if (!currentVoter) {
-      return null;
-    }
-
-    if (!selectedTarget) {
-      return (
-        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-          <div className="container">
-            <div className="max-w-2xl mx-auto">
-              <Card className="bg-card border-border p-8">
-                <h3 className="text-2xl font-bold mb-8 text-center" style={{ fontFamily: 'Playfair Display' }}>
-                  {currentVoter.name}, escolhe alguém
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {players.map((player, idx) => (
-                    <Button
-                      key={idx}
-                      onClick={() => setSelectedTarget(player.name)}
-                      className="bg-primary hover:bg-orange-600 text-white py-6"
-                    >
-                      {player.name}
-                    </Button>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          </div>
-        </div>
-      );
-    }
+    const otherPlayers = players.filter(p => p.name !== currentVoter.name);
 
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="container">
-          <div className="max-w-md mx-auto">
-            <Card className="bg-card border-border p-8 text-center">
-              <h3 className="text-2xl font-bold mb-8" style={{ fontFamily: 'Playfair Display' }}>
-                {currentVoter.name} acha que {selectedTarget} é...
-              </h3>
-              <div className="space-y-3">
-                <Button
-                  onClick={() => saveVote(selectedTarget, '🕵️ Ladrão')}
-                  className="w-full bg-primary hover:bg-orange-600 text-white py-6"
-                >
-                  🕵️ Ladrão
-                </Button>
-                <Button
-                  onClick={() => saveVote(selectedTarget, '🚓 Polícia')}
-                  className="w-full bg-primary hover:bg-orange-600 text-white py-6"
-                >
-                  🚓 Polícia
-                </Button>
-                <Button
-                  onClick={() => saveVote(selectedTarget, '⚖️ Advogado')}
-                  className="w-full bg-primary hover:bg-orange-600 text-white py-6"
-                >
-                  ⚖️ Advogado
-                </Button>
-              </div>
-            </Card>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <Card className="bg-card border-border p-8 max-w-2xl w-full">
+          <h2 className="text-3xl font-bold mb-6 text-center" style={{ fontFamily: 'Playfair Display' }}>
+            {currentVoter.name}, escolhe alguém
+          </h2>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {otherPlayers.map((player, idx) => (
+              <Button
+                key={idx}
+                onClick={() => setSelectedTarget(player.name)}
+                className={`p-4 h-auto ${
+                  selectedTarget === player.name
+                    ? 'bg-orange-600 ring-2 ring-orange-400'
+                    : 'bg-orange-500 hover:bg-orange-600'
+                }`}
+              >
+                {player.name}
+              </Button>
+            ))}
           </div>
-        </div>
+          <Button
+            onClick={saveVote}
+            disabled={!selectedTarget}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 py-3 text-lg"
+          >
+            ✓ Confirmar Voto
+          </Button>
+        </Card>
       </div>
     );
   }
 
   // RESULTS
   if (phase === 'results') {
-    const ranking = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    const sortedScores = Object.entries(scores).sort((a, b) => b[1] - a[1]);
 
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <div className="container">
-          <div className="max-w-2xl mx-auto">
-            <Card className="bg-card border-border p-8">
-              <h2 className="text-4xl font-bold mb-8 text-center text-primary" style={{ fontFamily: 'Playfair Display' }}>
-                🏆 Resultados
-              </h2>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <Card className="bg-card border-border p-8 max-w-2xl w-full">
+          <h2 className="text-4xl font-bold mb-8 text-center text-orange-400" style={{ fontFamily: 'Playfair Display' }}>
+            🏆 Resultados
+          </h2>
 
-              <div className="mb-8 p-6 bg-background rounded-lg border border-border">
-                <h3 className="text-2xl font-bold mb-4 text-center" style={{ fontFamily: 'Playfair Display' }}>
-                  Papéis Revelados
-                </h3>
-                <div className="space-y-2">
-                  {roles.map((role, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-3 bg-card rounded">
-                      <span className="font-semibold">{role.name}</span>
-                      <span className="text-lg">{role.role}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-8 p-6 bg-background rounded-lg border border-border">
-                <h3 className="text-2xl font-bold mb-4 text-center" style={{ fontFamily: 'Playfair Display' }}>
-                  Ranking
-                </h3>
-                <div className="space-y-2">
-                  {ranking.map((entry, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-3 bg-card rounded">
-                      <span className="font-semibold">
-                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`} {entry[0]}
-                      </span>
-                      <span className="text-lg font-bold text-primary">{entry[1]} pts</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <Button
-                onClick={resetGame}
-                className="w-full bg-primary hover:bg-orange-600 text-white py-6 text-lg font-semibold"
-              >
-                🔄 Recomeçar
-              </Button>
-            </Card>
+          <div className="mb-8 p-6 bg-background rounded-lg border border-border">
+            <p className="text-lg font-bold mb-4">Papéis Revelados:</p>
+            <div className="space-y-2">
+              {roles.map((role, idx) => (
+                <p key={idx} className="text-sm">
+                  <span className="font-bold">{role.name}</span> - {role.role}
+                </p>
+              ))}
+            </div>
           </div>
-        </div>
+
+          <div className="mb-8">
+            <p className="text-lg font-bold mb-4">Ranking:</p>
+            <div className="space-y-3">
+              {sortedScores.map(([name, score], idx) => (
+                <div key={idx} className="flex justify-between items-center p-3 bg-background rounded border border-border">
+                  <div>
+                    <span className="text-2xl mr-3">
+                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''}
+                    </span>
+                    <span className="font-bold">{name}</span>
+                  </div>
+                  <span className="text-orange-400 font-bold">{score} pts</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Button
+            onClick={restartGame}
+            className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg"
+          >
+            🔄 Recomeçar
+          </Button>
+        </Card>
       </div>
     );
   }
