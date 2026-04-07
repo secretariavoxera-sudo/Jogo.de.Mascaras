@@ -1,7 +1,8 @@
 /**
- * GameContainer - Componente Principal do Jogo "Rouba a Cena"
+ * GameContainer - Componente Principal do Jogo "Jogo de Máscaras"
  * Design: Teatralismo Dramático - Preto + Laranja + Ouro
  * Tipografia: Playfair Display (títulos) + Inter (corpo)
+ * Sistema de Papéis: Debate (Defensor, Contestador, Mediador, Infiltrado)
  * Baseado no código original funcional
  */
 
@@ -35,10 +36,10 @@ const TOPICS = [
 ];
 
 const ROLE_DESCRIPTIONS: { [key: string]: string } = {
-  '🚓 Polícia': 'Descobre quem são os ladrões sem te expor.',
-  '🕶️ Agente Secreto': 'Ajuda a polícia em segredo.',
-  '⚖️ Advogado': 'Protege os ladrões e confunde o grupo.',
-  '🕵️ Ladrão': 'Engana todos e tenta não ser descoberto.'
+  '🎤 Defensor': 'Defende a verdade. Sabe a resposta correta e a deve defender durante o debate.',
+  '🎤 Contestador': 'Questiona tudo. Tenta descobrir quem está a mentir através de perguntas inteligentes.',
+  '🤐 Mediador': 'Neutro e observador. Conhece todos os segredos e vota com base na lógica.',
+  '🎭 Infiltrado': 'O impostor! Finge ser Defensor mas é secretamente um Contestador. Engana todos!'
 };
 
 export default function GameContainer() {
@@ -113,15 +114,20 @@ export default function GameContainer() {
     const newRoles: Role[] = [];
 
     if (players.length === 4) {
-      newRoles.push({ name: others[0].name, role: '🚓 Polícia' });
-      newRoles.push({ name: others[1].name, role: '⚖️ Advogado' });
-      newRoles.push({ name: others[2].name, role: '🕵️ Ladrão' });
+      newRoles.push({ name: others[0].name, role: '🎤 Defensor' });
+      newRoles.push({ name: others[1].name, role: '🎤 Contestador' });
+      newRoles.push({ name: others[2].name, role: '🤐 Mediador' });
+    } else if (players.length === 5) {
+      newRoles.push({ name: others[0].name, role: '🎤 Defensor' });
+      newRoles.push({ name: others[1].name, role: '🎤 Contestador' });
+      newRoles.push({ name: others[2].name, role: '🤐 Mediador' });
+      newRoles.push({ name: others[3].name, role: '🎭 Infiltrado' });
     } else {
-      newRoles.push({ name: others[0].name, role: '🚓 Polícia' });
-      newRoles.push({ name: others[1].name, role: '🕶️ Agente Secreto' });
-      newRoles.push({ name: others[2].name, role: '⚖️ Advogado' });
+      newRoles.push({ name: others[0].name, role: '🎤 Defensor' });
+      newRoles.push({ name: others[1].name, role: '🎤 Contestador' });
+      newRoles.push({ name: others[2].name, role: '🤐 Mediador' });
       for (let i = 3; i < others.length; i++) {
-        newRoles.push({ name: others[i].name, role: '🕵️ Ladrão' });
+        newRoles.push({ name: others[i].name, role: '🎭 Infiltrado' });
       }
     }
 
@@ -215,9 +221,9 @@ export default function GameContainer() {
         >
           <div className="text-center">
             <h1 className="text-6xl font-bold text-white mb-2" style={{ fontFamily: 'Playfair Display' }}>
-              Rouba a Cena
+              Jogo de Máscaras
             </h1>
-            <p className="text-xl text-orange-300">O jogo de papéis e engano</p>
+            <p className="text-xl text-orange-300">Debate, Engano e Verdade</p>
           </div>
         </div>
 
