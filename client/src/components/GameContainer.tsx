@@ -4,9 +4,10 @@
  * Tipografia: Playfair Display (títulos) + Inter (corpo)
  * Sistema de Papéis: Debate (Defensor, Contestador, Mediador, Infiltrado)
  * Mecânica: Verdade Secreta - O Defensor defende uma verdade, o Contestador questiona, o Mediador sabe a verdade
+ * Melhorias: Defensor escolhe tema, Ranking persistente com localStorage
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
@@ -20,7 +21,7 @@ interface Role {
   role: string;
 }
 
-type GamePhase = 'setup' | 'chooseTheme' | 'pickStar' | 'chooseAnswer' | 'showRoles' | 'discussion' | 'voting' | 'results';
+type GamePhase = 'setup' | 'selectDefender' | 'defensorChoosesTheme' | 'chooseAnswer' | 'showRoles' | 'discussion' | 'voting' | 'results';
 
 const TOPICS = [
   'Trair é justificável?',
@@ -42,18 +43,46 @@ const ROLE_DESCRIPTIONS: { [key: string]: string } = {
   '🎭 Infiltrado': 'O impostor! Finge ser Defensor mas defende o oposto da verdade. Engana todos!'
 };
 
+// Carregar dados do localStorage
+const loadScoresFromStorage = () => {
+  try {
+    const stored = localStorage.getItem('jogoMascarasScores');
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+};
+
+const loadPlayersFromStorage = () => {
+  try {
+    const stored = localStorage.getItem('jogoMascarasPlayers');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+// Guardar dados no localStorage
+const saveScoresToStorage = (scores: { [key: string]: number }) => {
+  localStorage.setItem('jogoMascarasScores', JSON.stringify(scores));
+};
+
+const savePlayersToStorage = (players: Player[]) => {
+  localStorage.setItem('jogoMascarasPlayers', JSON.stringify(players));
+};
+
 export default function GameContainer() {
   const { playApplause, playBoo, playVoteConfirm } = useSoundEffects();
 
   // Estados principais
   const [phase, setPhase] = useState<GamePhase>('setup');
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<Player[]>(() => loadPlayersFromStorage());
   const [newPlayerName, setNewPlayerName] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('');
   const [secretAnswer, setSecretAnswer] = useState<'SIM' | 'NÃO' | ''>('');
-  const [star, setStar] = useState('');
+  const [defensor, setDefensor] = useState('');
   const [roles, setRoles] = useState<Role[]>([]);
-  const [scores, setScores] = useState<{ [key: string]: number }>({});
+  const [scores, setScores] = useState<{ [key: string]: number }>(() => loadScoresFromStorage());
   
   // Estados para mostrar papéis
   const [roleIndex, setRoleIndex] = useState(0);
@@ -64,13 +93,25 @@ export default function GameContainer() {
   const [voteIndex, setVoteIndex] = useState(0);
   const [selectedTarget, setSelectedTarget] = useState('');
 
+  // Guardar scores quando mudam
+  useEffect(() => {
+    saveScoresToStorage(scores);
+  }, [scores]);
+
+  // Guardar players quando mudam
+  useEffect(() => {
+    savePlayersToStorage(players);
+  }, [players]);
+
   // Adicionar jogador
   const addPlayer = () => {
     if (newPlayerName.trim() && players.length < 10) {
-      const newScores = { ...scores };
-      newScores[newPlayerName.trim()] = 0;
-      setPlayers([...players, { name: newPlayerName.trim() }]);
-      setScores(newScores);
+      const newPlayer = { name: newPlayerName.trim() };
+      setPlayers([...players, newPlayer]);
+      // Se o jogador não tem score, inicializar com 0
+      if (!scores[newPlayerName.trim()]) {
+        setScores({ ...scores, [newPlayerName.trim()]: 0 });
+      }
       setNewPlayerName('');
     }
   };
@@ -79,139 +120,165 @@ export default function GameContainer() {
   const removePlayer = (index: number) => {
     const removed = players[index];
     setPlayers(players.filter((_, i) => i !== index));
-    const newScores = { ...scores };
-    delete newScores[removed.name];
-    setScores(newScores);
+    // Manter o score do jogador removido (para histórico)
   };
 
-  // Começar jogo
+  // Começar jogo - selecionar Defensor
   const startGame = () => {
     if (players.length < 4) {
       alert('Mínimo 4 jogadores para começar');
       return;
     }
-    setPhase('chooseTheme');
+    setPhase('selectDefender');
   };
 
-  // Escolher tema
-  const chooseTheme = (topic: string) => {
+  // Selecionar Defensor
+  const selectDefensor = (playerName: string) => {
+    setDefensor(playerName);
+    setPhase('defensorChoosesTheme');
+  };
+
+  // Defensor escolhe tema
+  const defensorChoosesTheme = (topic: string) => {
     setSelectedTopic(topic);
     setPhase('chooseAnswer');
   };
 
-  // Escolher a verdade secreta
+  // Escolher resposta secreta
   const chooseAnswer = (answer: 'SIM' | 'NÃO') => {
     setSecretAnswer(answer);
-    setPhase('pickStar');
+    assignRoles();
   };
 
-  // Escolher estrela (Defensor)
-  const pickStar = () => {
-    const randomStar = players[Math.floor(Math.random() * players.length)];
-    setStar(randomStar.name);
-    assignRoles(randomStar.name);
-  };
-
-  // Atribuir papéis - Sistema Debate
-  const assignRoles = (starName: string) => {
-    const others = players
-      .filter(p => p.name !== starName)
-      .sort(() => 0.5 - Math.random());
-
+  // Atribuir papéis
+  const assignRoles = () => {
+    const shuffled = [...players].sort(() => Math.random() - 0.5);
     const newRoles: Role[] = [];
-
-    if (players.length === 4) {
-      // Sistema Debate: Defensor, Contestador, Mediador, Infiltrado
-      newRoles.push({ name: starName, role: '🎤 Defensor' });
-      newRoles.push({ name: others[0].name, role: '🎤 Contestador' });
-      newRoles.push({ name: others[1].name, role: '🤐 Mediador' });
-      newRoles.push({ name: others[2].name, role: '🎭 Infiltrado' });
-    } else if (players.length === 5) {
-      newRoles.push({ name: starName, role: '🎤 Defensor' });
-      newRoles.push({ name: others[0].name, role: '🎤 Contestador' });
-      newRoles.push({ name: others[1].name, role: '🤐 Mediador' });
-      newRoles.push({ name: others[2].name, role: '🎭 Infiltrado' });
-      newRoles.push({ name: others[3].name, role: '🎭 Infiltrado' });
-    } else {
-      newRoles.push({ name: starName, role: '🎤 Defensor' });
-      newRoles.push({ name: others[0].name, role: '🎤 Contestador' });
-      newRoles.push({ name: others[1].name, role: '🤐 Mediador' });
-      for (let i = 2; i < others.length; i++) {
-        newRoles.push({ name: others[i].name, role: '🎭 Infiltrado' });
-      }
+    
+    // Defensor recebe a verdade secreta
+    newRoles.push({
+      name: defensor,
+      role: '🎤 Defensor'
+    });
+    
+    // Mediador (sabe a verdade)
+    const mediadorIdx = shuffled.findIndex(p => p.name !== defensor);
+    if (mediadorIdx !== -1) {
+      newRoles.push({
+        name: shuffled[mediadorIdx].name,
+        role: '🤐 Mediador'
+      });
     }
-
+    
+    // Contestador e Infiltrado (outros dois)
+    const remaining = shuffled.filter(p => p.name !== defensor && !newRoles.some(r => r.name === p.name));
+    if (remaining.length >= 2) {
+      newRoles.push({
+        name: remaining[0].name,
+        role: '🎤 Contestador'
+      });
+      newRoles.push({
+        name: remaining[1].name,
+        role: '🎭 Infiltrado'
+      });
+    }
+    
     setRoles(newRoles);
+    setPhase('showRoles');
     setRoleIndex(0);
     setRoleRevealed(false);
-    setPhase('showRoles');
   };
 
-  // Revelar próximo papel
-  const revealNextRole = () => {
+  // Revelar papel
+  const revealRole = () => {
+    setRoleRevealed(true);
+  };
+
+  // Passar para próximo papel
+  const nextRole = () => {
     if (roleIndex < roles.length - 1) {
       setRoleIndex(roleIndex + 1);
       setRoleRevealed(false);
     } else {
       setPhase('discussion');
+      setRoleIndex(0);
+      setRoleRevealed(false);
     }
   };
 
   // Começar votação
   const startVoting = () => {
+    setPhase('voting');
     setVoteIndex(0);
     setSelectedTarget('');
     setVotes([]);
-    setPhase('voting');
   };
 
-  // Salvar voto
-  const saveVote = () => {
-    if (!selectedTarget) return;
-    
+  // Guardar voto
+  const saveVote = (target: string) => {
     playVoteConfirm();
-    const currentVoter = players[voteIndex];
-    const currentRole = roles.find(r => r.name === currentVoter.name)?.role || '';
+    const voter = roles[voteIndex];
+    const newVotes = [...votes, { voter: voter.name, target, role: voter.role }];
+    setVotes(newVotes);
     
-    setVotes([...votes, { voter: currentVoter.name, target: selectedTarget, role: currentRole }]);
-    
-    if (voteIndex < players.length - 1) {
+    if (voteIndex < roles.length - 1) {
       setVoteIndex(voteIndex + 1);
       setSelectedTarget('');
     } else {
-      calculateResults();
+      calculateResults(newVotes);
     }
   };
 
   // Calcular resultados
-  const calculateResults = () => {
+  const calculateResults = (finalVotes: Array<{ voter: string; target: string; role: string }>) => {
     const newScores = { ...scores };
     
-    votes.forEach(vote => {
-      const targetRole = roles.find(r => r.name === vote.target)?.role || '';
-      const voterRole = vote.role;
-      
-      // Lógica de pontuação baseada na verdade secreta
-      if (targetRole === '🎭 Infiltrado') {
-        // Acertou em identificar o Infiltrado
-        playApplause();
-        newScores[vote.voter] = (newScores[vote.voter] || 0) + 1;
-      } else if (targetRole === '🎤 Defensor' && voterRole === '🎭 Infiltrado') {
-        // Infiltrado votou no Defensor (estratégia)
-        playApplause();
-        newScores[vote.voter] = (newScores[vote.voter] || 0) + 1;
-      } else {
-        // Erro
-        playBoo();
+    // Inicializar scores se necessário
+    players.forEach(p => {
+      if (!newScores[p.name]) {
+        newScores[p.name] = 0;
       }
     });
+
+    // Contar votos para cada jogador
+    const voteCounts: { [key: string]: number } = {};
+    finalVotes.forEach(vote => {
+      voteCounts[vote.target] = (voteCounts[vote.target] || 0) + 1;
+    });
+
+    // Determinar quem foi mais votado
+    const mostVoted = Object.entries(voteCounts).sort(([, a], [, b]) => b - a)[0];
+    
+    if (mostVoted) {
+      const targetName = mostVoted[0];
+      const targetRole = roles.find(r => r.name === targetName)?.role || '';
+      
+      // Se o mais votado é o Infiltrado, todos ganham pontos
+      if (targetRole === '🎭 Infiltrado') {
+        finalVotes.forEach(vote => {
+          if (vote.voter !== targetName) {
+            newScores[vote.voter] = (newScores[vote.voter] || 0) + 1;
+            playApplause();
+          }
+        });
+      } else {
+        // Se não é o Infiltrado, o Infiltrado ganha pontos
+        const infiltrado = roles.find(r => r.role === '🎭 Infiltrado');
+        if (infiltrado) {
+          newScores[infiltrado.name] = (newScores[infiltrado.name] || 0) + 2;
+          playApplause();
+        } else {
+          playBoo();
+        }
+      }
+    }
 
     // Bónus para Infiltrado não descoberto
     roles.forEach(roleObj => {
       if (roleObj.role === '🎭 Infiltrado') {
-        const wasVotedFor = votes.some(v => v.target === roleObj.name);
+        const wasVotedFor = finalVotes.some(v => v.target === roleObj.name);
         if (!wasVotedFor) {
-          newScores[roleObj.name] = (newScores[roleObj.name] || 0) + 2;
+          newScores[roleObj.name] = (newScores[roleObj.name] || 0) + 1;
         }
       }
     });
@@ -223,13 +290,10 @@ export default function GameContainer() {
   // Recomeçar jogo
   const restartGame = () => {
     setPhase('setup');
-    setPlayers([]);
-    setNewPlayerName('');
     setSelectedTopic('');
     setSecretAnswer('');
-    setStar('');
+    setDefensor('');
     setRoles([]);
-    setScores({});
     setRoleIndex(0);
     setRoleRevealed(false);
     setVotes([]);
@@ -291,9 +355,9 @@ export default function GameContainer() {
                         <span>{player.name}</span>
                         <Button
                           onClick={() => removePlayer(idx)}
-                          variant="outline"
+                          variant="destructive"
                           size="sm"
-                          className="text-red-500 hover:bg-red-500/10"
+                          className="text-xs"
                         >
                           Remover
                         </Button>
@@ -303,17 +367,38 @@ export default function GameContainer() {
                 </div>
               )}
 
-              <div className="mb-6 p-3 bg-orange-500/20 border border-orange-500/50 rounded-lg text-sm">
-                ℹ️ Mínimo 4 jogadores para começar
+              {/* Mostrar Ranking */}
+              {Object.keys(scores).length > 0 && (
+                <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                  <p className="text-sm font-bold text-orange-400 mb-3">🏆 Ranking Geral</p>
+                  <div className="space-y-2">
+                    {Object.entries(scores)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([name, score], idx) => (
+                        <div key={idx} className="flex justify-between items-center text-sm">
+                          <span>{idx + 1}. {name}</span>
+                          <span className="font-bold text-orange-400">{score} pts</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={startGame}
+                  disabled={players.length < 4}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600"
+                >
+                  ▶️ Começar Jogo
+                </Button>
               </div>
 
-              <Button
-                onClick={startGame}
-                disabled={players.length < 4}
-                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 py-3 text-lg"
-              >
-                ▶️ Começar Jogo
-              </Button>
+              {players.length < 4 && (
+                <p className="mt-4 p-3 bg-orange-500/20 border border-orange-500/50 rounded text-sm text-orange-300">
+                  ℹ️ Mínimo 4 jogadores para começar
+                </p>
+              )}
             </Card>
           </div>
         </div>
@@ -321,19 +406,47 @@ export default function GameContainer() {
     );
   }
 
-  // CHOOSE THEME
-  if (phase === 'chooseTheme') {
+  // SELECT DEFENDER
+  if (phase === 'selectDefender') {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
         <Card className="bg-card border-border p-8 max-w-2xl w-full">
           <h2 className="text-4xl font-bold mb-8 text-center" style={{ fontFamily: 'Playfair Display' }}>
-            Escolhe o Tema
+            🎤 Quem é o Defensor?
           </h2>
+          <p className="text-center text-muted-foreground mb-6">
+            O Defensor vai escolher o tema e a verdade secreta. Tem o telemóvel!
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+            {players.map((player, idx) => (
+              <Button
+                key={idx}
+                onClick={() => selectDefensor(player.name)}
+                className="bg-orange-500 hover:bg-orange-600 text-white p-4 h-auto text-left whitespace-normal break-words"
+              >
+                {player.name}
+              </Button>
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // DEFENSOR CHOOSES THEME
+  if (phase === 'defensorChoosesTheme') {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+        <Card className="bg-card border-border p-8 max-w-2xl w-full">
+          <h2 className="text-4xl font-bold mb-2 text-center" style={{ fontFamily: 'Playfair Display' }}>
+            {defensor}, Escolhe o Tema
+          </h2>
+          <p className="text-center text-orange-400 mb-8 text-sm">Tu és o Defensor! 🎤</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
             {TOPICS.map((topic, idx) => (
               <Button
                 key={idx}
-                onClick={() => chooseTheme(topic)}
+                onClick={() => defensorChoosesTheme(topic)}
                 className="bg-orange-500 hover:bg-orange-600 text-white p-4 h-auto text-left whitespace-normal break-words"
               >
                 {topic}
@@ -355,20 +468,20 @@ export default function GameContainer() {
           </h2>
           <p className="text-xl text-orange-400 mb-8">{selectedTopic}</p>
           <p className="text-sm text-muted-foreground mb-6">
-            Escolhe a verdade secreta que o Defensor vai defender:
+            {defensor}, escolhe a verdade secreta que vais defender:
           </p>
           <div className="flex gap-4">
             <Button
               onClick={() => chooseAnswer('SIM')}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white text-lg font-bold py-6"
             >
-              ✅ SIM
+              ✓ SIM
             </Button>
             <Button
               onClick={() => chooseAnswer('NÃO')}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 text-lg"
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white text-lg font-bold py-6"
             >
-              ❌ NÃO
+              ✗ NÃO
             </Button>
           </div>
         </Card>
@@ -376,30 +489,10 @@ export default function GameContainer() {
     );
   }
 
-  // PICK STAR
-  if (phase === 'pickStar') {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-        <Card className="bg-card border-border p-8 max-w-md w-full text-center">
-          <h2 className="text-3xl font-bold mb-6" style={{ fontFamily: 'Playfair Display' }}>
-            ⭐ Escolhendo Defensor...
-          </h2>
-          <p className="text-muted-foreground mb-8">O Defensor será escolhido aleatoriamente</p>
-          <Button
-            onClick={pickStar}
-            className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg"
-          >
-            Continuar
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
   // SHOW ROLES
-  if (phase === 'showRoles' && roleIndex < roles.length) {
+  if (phase === 'showRoles') {
     const currentRole = roles[roleIndex];
-    const roleDesc = ROLE_DESCRIPTIONS[currentRole.role] || '';
+    if (!currentRole) return null;
 
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
@@ -407,44 +500,37 @@ export default function GameContainer() {
           <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: 'Playfair Display' }}>
             {currentRole.name}
           </h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Papel {roleIndex + 1} de {roles.length}
-          </p>
+          <p className="text-sm text-muted-foreground mb-6">Papel {roleIndex + 1} de {roles.length}</p>
 
           {!roleRevealed ? (
-            <Button
-              onClick={() => setRoleRevealed(true)}
-              className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg mb-4"
-            >
-              Ver Papel
-            </Button>
-          ) : (
-            <>
-              <div className="mb-6 p-6 bg-background rounded-lg border-2 border-orange-500">
-                <p className="text-4xl mb-3">{currentRole.role.split(' ')[0]}</p>
-                <p className="text-2xl font-bold text-orange-400 mb-3">
-                  {currentRole.role.split(' ').slice(1).join(' ')}
-                </p>
-                <p className="text-sm text-muted-foreground">{roleDesc}</p>
-                {currentRole.role === '🎤 Defensor' && (
-                  <p className="text-lg font-bold text-green-400 mt-4">
-                    Verdade Secreta: {secretAnswer}
-                  </p>
-                )}
-                {currentRole.role === '🤐 Mediador' && (
-                  <p className="text-lg font-bold text-blue-400 mt-4">
-                    Verdade Secreta: {secretAnswer}
-                  </p>
-                )}
-              </div>
-              <Button
-                onClick={revealNextRole}
-                className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg"
-              >
-                {roleIndex === roles.length - 1 ? 'Começar Discussão' : 'Passar'}
+            <div className="mb-6">
+              <div className="text-6xl mb-4">🎭</div>
+              <Button onClick={revealRole} className="w-full bg-orange-500 hover:bg-orange-600">
+                Ver Papel
               </Button>
-            </>
+            </div>
+          ) : (
+            <div className="mb-6 p-4 border-2 border-orange-500 rounded-lg bg-background">
+              <p className="text-2xl font-bold text-orange-400 mb-3">{currentRole.role}</p>
+              <p className="text-sm text-foreground mb-3">
+                {ROLE_DESCRIPTIONS[currentRole.role]}
+              </p>
+              {currentRole.role === '🎤 Defensor' && (
+                <p className="text-lg font-bold text-green-400">
+                  Verdade Secreta: {secretAnswer}
+                </p>
+              )}
+              {currentRole.role === '🤐 Mediador' && (
+                <p className="text-lg font-bold text-blue-400">
+                  Verdade Secreta: {secretAnswer}
+                </p>
+              )}
+            </div>
           )}
+
+          <Button onClick={nextRole} className="w-full bg-orange-500 hover:bg-orange-600">
+            {roleIndex < roles.length - 1 ? 'Passar' : 'Começar Discussão'}
+          </Button>
         </Card>
       </div>
     );
@@ -454,22 +540,19 @@ export default function GameContainer() {
   if (phase === 'discussion') {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-        <Card className="bg-card border-border p-8 max-w-2xl w-full">
-          <h2 className="text-4xl font-bold mb-6 text-center" style={{ fontFamily: 'Playfair Display' }}>
-            💬 Discussão
+        <Card className="bg-card border-border p-8 max-w-2xl w-full text-center">
+          <h2 className="text-4xl font-bold mb-6" style={{ fontFamily: 'Playfair Display' }}>
+            💬 Fase de Discussão
           </h2>
-          <div className="mb-8 p-6 bg-background rounded-lg border border-border">
-            <p className="text-xl text-orange-400 mb-4 font-bold">Tema:</p>
-            <p className="text-2xl mb-6">{selectedTopic}</p>
-            <p className="text-sm text-muted-foreground">
-              O Defensor defende a verdade secreta. O Contestador questiona. O Mediador observa. O Infiltrado tenta enganar!
-            </p>
-          </div>
+          <p className="text-xl text-orange-400 mb-4">{selectedTopic}</p>
+          <p className="text-muted-foreground mb-8">
+            Debatam! O Defensor defende a verdade, o Contestador questiona, o Mediador observa, e o Infiltrado engana!
+          </p>
           <Button
             onClick={startVoting}
-            className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg"
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg py-6"
           >
-            🗳️ Ir Votar
+            ▶️ Ir Votar
           </Button>
         </Card>
       </div>
@@ -477,35 +560,42 @@ export default function GameContainer() {
   }
 
   // VOTING
-  if (phase === 'voting' && voteIndex < players.length) {
-    const currentVoter = players[voteIndex];
-    const otherPlayers = players.filter(p => p.name !== currentVoter.name);
+  if (phase === 'voting') {
+    const currentVoter = roles[voteIndex];
+    if (!currentVoter) return null;
 
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
         <Card className="bg-card border-border p-8 max-w-2xl w-full">
-          <h2 className="text-3xl font-bold mb-6 text-center" style={{ fontFamily: 'Playfair Display' }}>
-            {currentVoter.name}, escolhe alguém
+          <h2 className="text-3xl font-bold mb-2 text-center" style={{ fontFamily: 'Playfair Display' }}>
+            {currentVoter.name}, em quem votas?
           </h2>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            {otherPlayers.map((player, idx) => (
-              <Button
-                key={idx}
-                onClick={() => setSelectedTarget(player.name)}
-                className={`p-4 h-auto ${
-                  selectedTarget === player.name
-                    ? 'bg-orange-600 ring-2 ring-orange-400'
-                    : 'bg-orange-500 hover:bg-orange-600'
-                }`}
-              >
-                {player.name}
-              </Button>
-            ))}
-          </div>
+          <p className="text-center text-muted-foreground mb-6">Voto {voteIndex + 1} de {roles.length}</p>
+
+          {!selectedTarget ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+              {roles
+                .filter(r => r.name !== currentVoter.name)
+                .map((role, idx) => (
+                  <Button
+                    key={idx}
+                    onClick={() => setSelectedTarget(role.name)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white p-4 h-auto"
+                  >
+                    {role.name}
+                  </Button>
+                ))}
+            </div>
+          ) : (
+            <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg">
+              <p className="text-lg font-bold text-blue-400">Votaste em: {selectedTarget}</p>
+            </div>
+          )}
+
           <Button
-            onClick={saveVote}
+            onClick={() => saveVote(selectedTarget)}
             disabled={!selectedTarget}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 py-3 text-lg"
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg py-6"
           >
             ✓ Confirmar Voto
           </Button>
@@ -516,7 +606,7 @@ export default function GameContainer() {
 
   // RESULTS
   if (phase === 'results') {
-    const sortedScores = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    const sortedScores = Object.entries(scores).sort(([, a], [, b]) => b - a);
 
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
@@ -525,39 +615,26 @@ export default function GameContainer() {
             🏆 Resultados
           </h2>
 
-          <div className="mb-8 p-6 bg-background rounded-lg border border-border">
-            <p className="text-lg font-bold mb-4">Papéis Revelados:</p>
-            <div className="space-y-2">
-              {roles.map((role, idx) => (
-                <p key={idx} className="text-sm">
-                  <span className="font-bold">{role.name}</span> - {role.role}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <p className="text-lg font-bold mb-4">Ranking:</p>
-            <div className="space-y-3">
-              {sortedScores.map(([name, score], idx) => (
-                <div key={idx} className="flex justify-between items-center p-3 bg-background rounded border border-border">
+          <div className="mb-8 space-y-3">
+            {sortedScores.map(([name, score], idx) => {
+              const role = roles.find(r => r.name === name);
+              return (
+                <div key={idx} className="p-4 bg-background rounded-lg border border-border flex justify-between items-center">
                   <div>
-                    <span className="text-2xl mr-3">
-                      {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''}
-                    </span>
-                    <span className="font-bold">{name}</span>
+                    <p className="font-bold text-lg">{idx + 1}. {name}</p>
+                    <p className="text-sm text-muted-foreground">{role?.role}</p>
                   </div>
-                  <span className="text-orange-400 font-bold">{score} pts</span>
+                  <p className="text-2xl font-bold text-orange-400">{score} pts</p>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
 
           <Button
             onClick={restartGame}
-            className="w-full bg-orange-500 hover:bg-orange-600 py-3 text-lg"
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg py-6"
           >
-            🔄 Recomeçar
+            ▶️ Próximo Jogo
           </Button>
         </Card>
       </div>
