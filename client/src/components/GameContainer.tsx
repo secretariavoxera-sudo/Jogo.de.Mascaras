@@ -582,13 +582,18 @@ export default function GameContainer() {
                     onClick={() => setSelectedTarget(role.name)}
                     className="bg-blue-600 hover:bg-blue-700 text-white p-4 h-auto"
                   >
-                    {role.name}
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="font-bold">{role.name}</span>
+                      <span className="text-xs opacity-90">{role.role}</span>
+                    </div>
                   </Button>
                 ))}
             </div>
           ) : (
             <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg">
-              <p className="text-lg font-bold text-blue-400">Votaste em: {selectedTarget}</p>
+              <p className="text-lg font-bold text-blue-400">Votaste em:</p>
+              <p className="text-base font-bold text-blue-300 mt-2">{selectedTarget}</p>
+              <p className="text-sm text-blue-300/80 mt-1">{roles.find(r => r.name === selectedTarget)?.role}</p>
             </div>
           )}
 
