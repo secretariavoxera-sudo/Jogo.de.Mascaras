@@ -21,7 +21,7 @@ interface Role {
   role: string;
 }
 
-type GamePhase = 'setup' | 'selectDefender' | 'defensorChoosesTheme' | 'chooseAnswer' | 'showRoles' | 'discussion' | 'voting' | 'results';
+type GamePhase = 'setup' | 'defensorChoosesTheme' | 'chooseAnswer' | 'showRoles' | 'discussion' | 'voting' | 'results';
 
 const TOPICS = [
   'Trair é justificável?',
@@ -123,18 +123,16 @@ export default function GameContainer() {
     // Manter o score do jogador removido (para histórico)
   };
 
-  // Começar jogo - selecionar Defensor
+  // Começar jogo - escolher Defensor aleatoriamente
   const startGame = () => {
     if (players.length < 4) {
       alert('Mínimo 4 jogadores para começar');
       return;
     }
-    setPhase('selectDefender');
-  };
-
-  // Selecionar Defensor
-  const selectDefensor = (playerName: string) => {
-    setDefensor(playerName);
+    // Escolher Defensor aleatoriamente
+    const randomIndex = Math.floor(Math.random() * players.length);
+    const randomDefensor = players[randomIndex].name;
+    setDefensor(randomDefensor);
     setPhase('defensorChoosesTheme');
   };
 
@@ -406,32 +404,7 @@ export default function GameContainer() {
     );
   }
 
-  // SELECT DEFENDER
-  if (phase === 'selectDefender') {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-        <Card className="bg-card border-border p-8 max-w-2xl w-full">
-          <h2 className="text-4xl font-bold mb-8 text-center" style={{ fontFamily: 'Playfair Display' }}>
-            🎤 Quem é o Defensor?
-          </h2>
-          <p className="text-center text-muted-foreground mb-6">
-            O Defensor vai escolher o tema e a verdade secreta. Tem o telemóvel!
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-            {players.map((player, idx) => (
-              <Button
-                key={idx}
-                onClick={() => selectDefensor(player.name)}
-                className="bg-orange-500 hover:bg-orange-600 text-white p-4 h-auto text-left whitespace-normal break-words"
-              >
-                {player.name}
-              </Button>
-            ))}
-          </div>
-        </Card>
-      </div>
-    );
-  }
+
 
   // DEFENSOR CHOOSES THEME
   if (phase === 'defensorChoosesTheme') {
