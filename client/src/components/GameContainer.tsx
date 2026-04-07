@@ -268,16 +268,16 @@ export default function GameContainer() {
                 </h2>
               </div>
 
-              <div className="flex gap-2 mb-6">
+              <div className="flex flex-col gap-2 mb-6 w-full">
                 <input
                   type="text"
                   placeholder="Nome do jogador..."
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
-                  className="flex-1 px-4 py-2 bg-background border border-border rounded-lg text-foreground"
+                  className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground"
                 />
-                <Button onClick={addPlayer} className="bg-orange-500 hover:bg-orange-600">
+                <Button onClick={addPlayer} className="w-full bg-orange-500 hover:bg-orange-600">
                   Adicionar
                 </Button>
               </div>
@@ -329,12 +329,12 @@ export default function GameContainer() {
           <h2 className="text-4xl font-bold mb-8 text-center" style={{ fontFamily: 'Playfair Display' }}>
             Escolhe o Tema
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
             {TOPICS.map((topic, idx) => (
               <Button
                 key={idx}
                 onClick={() => chooseTheme(topic)}
-                className="bg-orange-500 hover:bg-orange-600 text-white p-4 h-auto text-left"
+                className="bg-orange-500 hover:bg-orange-600 text-white p-4 h-auto text-left whitespace-normal break-words"
               >
                 {topic}
               </Button>
