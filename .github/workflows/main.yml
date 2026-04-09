@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy Jogo de Mascaras
 on:
   push:
     branches: [main]
@@ -12,14 +12,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Install and Build
         run: |
-          cd client
           npm install
           npm run build
-      - name: Upload
+        # Removi o "cd client" para ele procurar na pasta principal
+      - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: client/dist
-      - name: Deploy
+          path: dist
+      - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
