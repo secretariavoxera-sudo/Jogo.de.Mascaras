@@ -130,6 +130,8 @@ export default function GameContainer() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [scores, setScores] = useState<{ [key: string]: number }>(() => loadScoresFromStorage());
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showAgeGate, setShowAgeGate] = useState(false);
+  const [pendingAdultPack, setPendingAdultPack] = useState<ThemePack | null>(null);
   const [roleIndex, setRoleIndex] = useState(0);
   const [roleRevealed, setRoleRevealed] = useState(false);
   const [votes, setVotes] = useState<Array<{ voter: string; target: string; role: string }>>([]);
@@ -162,8 +164,25 @@ export default function GameContainer() {
   };
 
   const selectPack = (pack: ThemePack) => {
-    setSelectedPack(pack);
-    setPhase('selectTopic');
+    if (pack.isAdult) {
+      setPendingAdultPack(pack);
+      setShowAgeGate(true);
+    } else {
+      setSelectedPack(pack);
+      setPhase('selectTopic');
+    }
+  };
+  const confirmAgeGate = () => {
+    if (pendingAdultPack) {
+      setSelectedPack(pendingAdultPack);
+      setPhase('selectTopic');
+    }
+    setShowAgeGate(false);
+    setPendingAdultPack(null);
+  };
+  const cancelAgeGate = () => {
+    setShowAgeGate(false);
+    setPendingAdultPack(null);
   };
 
   const selectTopic = (topic: string) => {
@@ -433,45 +452,69 @@ export default function GameContainer() {
   // ─── SELECIONAR PACK ──────────────────────────────────────────────────────────
   if (phase === 'selectPack') {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-        <div className="max-w-2xl w-full">
-          <Button onClick={() => setPhase('setup')} variant="outline"
-            className="mb-4 border-border text-muted-foreground hover:text-foreground">
-            ← Voltar Atrás
-          </Button>
-          <Card className="bg-card border-border p-8">
-            <h2 className="text-4xl font-bold mb-2 text-center" style={{ fontFamily: 'Playfair Display' }}>
-              {defensor}, Escolhe o Pack
-            </h2>
-            <p className="text-center text-orange-400 mb-8 text-sm">Tu és o Defensor! 🎤 Escolhe a categoria de temas</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {THEME_PACKS.map(pack => (
-                <button key={pack.id} onClick={() => selectPack(pack)}
-                  className={`p-5 rounded-xl border-2 ${pack.borderColor} bg-gradient-to-br ${pack.color} text-left transition-all hover:scale-105 hover:shadow-lg`}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-3xl">{pack.emoji}</span>
-                    <div>
-                      <p className="font-bold text-foreground text-lg">{pack.name}</p>
-                      {pack.isAdult && (
-                        <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">18+</span>
-                      )}
+      <>
+        {/* Age Gate Modal */}
+        {showAgeGate && (
+          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+            <Card className="bg-card border-red-500/50 p-8 max-w-sm w-full text-center">
+              <div className="text-5xl mb-4">🔞</div>
+              <h2 className="text-2xl font-bold mb-3 text-red-400" style={{ fontFamily: 'Playfair Display' }}>Conteúdo +18</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                O <strong className="text-foreground">Pack Ousado</strong> contém temas de natureza adulta e atrevida.
+                Confirmas que tens <strong className="text-red-400">18 anos ou mais</strong>?
+              </p>
+              <div className="flex gap-3">
+                <Button onClick={cancelAgeGate} variant="outline"
+                  className="flex-1 border-border text-muted-foreground hover:text-foreground">
+                  ✗ Não, voltar
+                </Button>
+                <Button onClick={confirmAgeGate}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold">
+                  ✓ Tenho +18
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+          <div className="max-w-2xl w-full">
+            <Button onClick={() => setPhase('setup')} variant="outline"
+              className="mb-4 border-border text-muted-foreground hover:text-foreground">
+              ← Voltar Atrás
+            </Button>
+            <Card className="bg-card border-border p-8">
+              <h2 className="text-4xl font-bold mb-2 text-center" style={{ fontFamily: 'Playfair Display' }}>
+                {defensor}, Escolhe o Pack
+              </h2>
+              <p className="text-center text-orange-400 mb-8 text-sm">Tu és o Defensor! 🎤 Escolhe a categoria de temas</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {THEME_PACKS.map(pack => (
+                  <button key={pack.id} onClick={() => selectPack(pack)}
+                    className={`p-5 rounded-xl border-2 ${pack.borderColor} bg-gradient-to-br ${pack.color} text-left transition-all hover:scale-105 hover:shadow-lg`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-3xl">{pack.emoji}</span>
+                      <div>
+                        <p className="font-bold text-foreground text-lg">{pack.name}</p>
+                        {pack.isAdult && (
+                          <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full">🔞 +18</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{pack.description}</p>
-                  <p className="text-xs text-orange-400 mt-2">{FREE_TOPICS_COUNT} temas gratuitos · {pack.topics.length - FREE_TOPICS_COUNT} premium</p>
-                </button>
-              ))}
-            </div>
-          </Card>
+                    <p className="text-sm text-muted-foreground">{pack.description}</p>
+                    <p className="text-xs text-green-400 mt-2">✓ {pack.topics.length} temas disponíveis</p>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // ─── SELECIONAR TEMA ──────────────────────────────────────────────────────────
   if (phase === 'selectTopic' && selectedPack) {
-    const freeTopics = selectedPack.topics.slice(0, FREE_TOPICS_COUNT);
-    const lockedTopics = selectedPack.topics.slice(FREE_TOPICS_COUNT);
+    const allTopics = selectedPack.topics;
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
         <div className="max-w-2xl w-full">
@@ -485,37 +528,16 @@ export default function GameContainer() {
               <h2 className="text-3xl font-bold" style={{ fontFamily: 'Playfair Display' }}>{selectedPack.name}</h2>
             </div>
             <p className="text-orange-400 mb-6 text-sm text-center">{defensor}, escolhe o tema do debate 🎤</p>
-            <p className="text-xs text-green-400 font-bold mb-3 uppercase tracking-wider">✓ Temas Gratuitos</p>
+            <p className="text-xs text-green-400 font-bold mb-3 uppercase tracking-wider">✓ {allTopics.length} Temas Disponíveis</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-              {freeTopics.map((topic, idx) => (
+              {allTopics.map((topic, idx) => (
                 <Button key={idx} onClick={() => selectTopic(topic)}
                   className="bg-orange-500 hover:bg-orange-600 text-white p-4 h-auto text-left whitespace-normal break-words leading-snug">
                   {topic}
                 </Button>
               ))}
             </div>
-            {lockedTopics.length > 0 && (
-              <>
-                <p className="text-xs text-muted-foreground font-bold mb-3 uppercase tracking-wider">
-                  🔒 Temas Premium ({lockedTopics.length} temas)
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {lockedTopics.slice(0, 4).map((topic, idx) => (
-                    <div key={idx} className="relative p-4 rounded-lg border border-border bg-background/50 overflow-hidden">
-                      <p className="text-sm text-muted-foreground blur-sm select-none">{topic}</p>
-                      <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
-                        <span className="text-2xl">🔒</span>
-                      </div>
-                    </div>
-                  ))}
-                  {lockedTopics.length > 4 && (
-                    <div className="col-span-full p-3 text-center text-sm text-muted-foreground border border-dashed border-border rounded-lg">
-                      + {lockedTopics.length - 4} temas premium disponíveis em breve
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+
           </Card>
         </div>
       </div>
