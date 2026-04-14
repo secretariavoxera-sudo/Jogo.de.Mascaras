@@ -8,10 +8,13 @@ var __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  const staticPath = process.env.NODE_ENV === "production" ? path.resolve(__dirname, "public") : path.resolve(__dirname, "..", "dist", "public");
-  app.use(express.static(staticPath));
-  app.get("*", (_req, res) => {
+  const staticPath = process.env.NODE_ENV === "production" ? __dirname : path.resolve(__dirname, "..", "dist");
+  app.use("/Jogo_de_Mascaras", express.static(staticPath));
+  app.get("/Jogo_de_Mascaras*", (_req, res) => {
     res.sendFile(path.join(staticPath, "index.html"));
+  });
+  app.get("/", (_req, res) => {
+    res.redirect("/Jogo_de_Mascaras/");
   });
   const port = process.env.PORT || 3e3;
   server.listen(port, () => {
