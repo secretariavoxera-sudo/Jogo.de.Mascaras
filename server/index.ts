@@ -10,17 +10,22 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Serve static files from dist/public in production
+  // Serve static files from dist
   const staticPath =
     process.env.NODE_ENV === "production"
-      ? path.resolve(__dirname, "public")
-      : path.resolve(__dirname, "..", "dist", "public");
+      ? __dirname
+      : path.resolve(__dirname, "..", "dist");
 
-  app.use(express.static(staticPath));
+  app.use("/Jogo_de_Mascaras", express.static(staticPath));
 
-  // Handle client-side routing - serve index.html for all routes
-  app.get("*", (_req, res) => {
+  // Handle client-side routing - serve index.html for all routes under the base path
+  app.get("/Jogo_de_Mascaras*", (_req, res) => {
     res.sendFile(path.join(staticPath, "index.html"));
+  });
+
+  // Redirect root to base path
+  app.get("/", (_req, res) => {
+    res.redirect("/Jogo_de_Mascaras/");
   });
 
   const port = process.env.PORT || 3000;
