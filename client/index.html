@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1"
     />
-    <title>Jogo de Mascaras</title>
+    <title>Jogo de Máscaras</title>
     <meta
       name="description"
       content="O jogo de debate social onde cada jogador esconde um papel secreto. Quem e o Infiltrado?"
@@ -21,7 +21,7 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <meta name="apple-mobile-web-app-title" content="Jogo de Mascaras" />
+    <meta name="apple-mobile-web-app-title" content="Jogo de Máscaras" />
 
     <!-- Favicon -->
     <link
@@ -38,7 +38,7 @@
     />
 
     <!-- Open Graph -->
-    <meta property="og:title" content="Jogo de Mascaras" />
+    <meta property="og:title" content="Jogo de Máscaras" />
     <meta
       property="og:description"
       content="O jogo de debate social onde cada jogador esconde um papel secreto."
@@ -70,10 +70,33 @@
             .register("/Jogo_de_Mascaras/sw.js")
             .then(function (reg) {
               console.log("SW registado:", reg.scope);
+
+              // Detetar atualizações do Service Worker
+              reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === "installed") {
+                    if (navigator.serviceWorker.controller) {
+                      // Novo conteúdo disponível, forçar recarregamento
+                      console.log("Novo conteúdo disponível. A recarregar...");
+                      window.location.reload();
+                    }
+                  }
+                };
+              };
             })
             .catch(function (err) {
               console.log("SW falhou:", err);
             });
+        });
+
+        // Garantir que o Service Worker assume o controlo imediatamente
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       }
     </script>

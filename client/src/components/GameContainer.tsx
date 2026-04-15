@@ -433,6 +433,8 @@ export default function GameContainer() {
             </p>
             <p className="text-muted-foreground mb-10 text-sm">
               Um jogo de dedução social para 4 a 6 jogadores
+              <br />
+              <span className="text-[10px] opacity-30 mt-2 block">v2.1.0</span>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
               <Button
@@ -751,15 +753,24 @@ export default function GameContainer() {
               ✓ {allTopics.length} Temas Disponíveis
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-              {allTopics.map((topic, idx) => (
-                <Button
-                  key={idx}
-                  onClick={() => selectTopic(topic)}
-                  className="bg-orange-500 hover:bg-orange-600 text-white p-4 h-auto text-left whitespace-normal break-words leading-snug"
-                >
-                  {topic}
-                </Button>
-              ))}
+              {allTopics.map((topic, idx) => {
+                const isLocked = idx >= FREE_TOPICS_COUNT;
+                return (
+                  <Button
+                    key={idx}
+                    onClick={() => !isLocked && selectTopic(topic)}
+                    disabled={isLocked}
+                    className={`p-4 h-auto text-left whitespace-normal break-words leading-snug flex justify-between items-center ${
+                      isLocked
+                        ? "bg-gray-800 text-gray-500 border-gray-700 cursor-not-allowed opacity-70"
+                        : "bg-orange-500 hover:bg-orange-600 text-white"
+                    }`}
+                  >
+                    <span>{topic}</span>
+                    {isLocked && <span className="ml-2">🔒</span>}
+                  </Button>
+                );
+              })}
             </div>
           </Card>
         </div>
