@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jogo-mascaras-v1';
+const CACHE_NAME = 'jogo-mascaras-v2';
 const BASE_PATH = '/Jogo_de_Mascaras';
 
 const STATIC_ASSETS = [
@@ -12,8 +12,8 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch(() => {
-        // Falha silenciosa se algum asset não estiver disponível
+      return cache.addAll(STATIC_ASSETS).catch((err) => {
+        console.warn('Falha ao pré-carregar assets:', err);
       });
     })
   );
@@ -34,29 +34,40 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Apenas interceptar pedidos GET
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // Estratégia "Network First" para a página principal e manifest
+  // Isto garante que as atualizações de código sejam detetadas imediatamente
+  if (event.request.mode === 'navigate' || url.pathname.endsWith('manifest.json')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Estratégia "Stale-while-revalidate" para outros assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        return response;
-      }).catch(() => {
-        // Offline fallback para navegação
-        if (event.request.mode === 'navigate') {
-          return caches.match(BASE_PATH + '/index.html');
-        }
+        return networkResponse;
       });
+      return cachedResponse || fetchPromise;
     })
   );
 });

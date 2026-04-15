@@ -36,13 +36,25 @@ jobs:
       - name: Build
         run: pnpm build:static
 
+      - name: Prepare Pages Artifact
+        run: |
+          mkdir -p public_deploy
+          cp index.html public_deploy/
+          cp manifest.json public_deploy/
+          cp sw.js public_deploy/
+          cp icon-192.png public_deploy/
+          cp icon-512.png public_deploy/
+          cp favicon-32.png public_deploy/
+          cp -r assets public_deploy/
+          cp .nojekyll public_deploy/
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: public_deploy
 
       - name: Deploy to GitHub Pages
         id: deployment
