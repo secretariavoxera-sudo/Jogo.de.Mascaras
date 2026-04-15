@@ -59,8 +59,8 @@
       gtag("js", new Date());
       gtag("config", "G-YEFXZNX8QM");
     </script>
-    <script type="module" crossorigin src="/Jogo_de_Mascaras/assets/index-CZzkNgPA.js"></script>
-    <link rel="stylesheet" crossorigin href="/Jogo_de_Mascaras/assets/index-4RRdPpWd.css">
+    <script type="module" crossorigin src="/Jogo_de_Mascaras/assets/index-BfLzn37Y.js"></script>
+    <link rel="stylesheet" crossorigin href="/Jogo_de_Mascaras/assets/index-ycjh88hL.css">
   </head>
   <body>
     <div id="root"></div>
@@ -71,10 +71,33 @@
             .register("/Jogo_de_Mascaras/sw.js")
             .then(function (reg) {
               console.log("SW registado:", reg.scope);
+
+              // Detetar atualizações do Service Worker
+              reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === "installed") {
+                    if (navigator.serviceWorker.controller) {
+                      // Novo conteúdo disponível, forçar recarregamento
+                      console.log("Novo conteúdo disponível. A recarregar...");
+                      window.location.reload();
+                    }
+                  }
+                };
+              };
             })
             .catch(function (err) {
               console.log("SW falhou:", err);
             });
+        });
+
+        // Garantir que o Service Worker assume o controlo imediatamente
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       }
     </script>

@@ -70,10 +70,33 @@
             .register("/Jogo_de_Mascaras/sw.js")
             .then(function (reg) {
               console.log("SW registado:", reg.scope);
+
+              // Detetar atualizações do Service Worker
+              reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === "installed") {
+                    if (navigator.serviceWorker.controller) {
+                      // Novo conteúdo disponível, forçar recarregamento
+                      console.log("Novo conteúdo disponível. A recarregar...");
+                      window.location.reload();
+                    }
+                  }
+                };
+              };
             })
             .catch(function (err) {
               console.log("SW falhou:", err);
             });
+        });
+
+        // Garantir que o Service Worker assume o controlo imediatamente
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       }
     </script>
