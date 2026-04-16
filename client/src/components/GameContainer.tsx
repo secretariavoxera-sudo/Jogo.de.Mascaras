@@ -434,7 +434,7 @@ export default function GameContainer() {
             <p className="text-muted-foreground mb-10 text-sm">
               Um jogo de dedução social para 4 a 6 jogadores
               <br />
-              <span className="text-[10px] opacity-30 mt-2 block">v2.1.0</span>
+              <span className="text-[10px] opacity-30 mt-2 block">v2.2.0</span>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
               <Button
@@ -711,7 +711,7 @@ export default function GameContainer() {
                       {pack.description}
                     </p>
                     <p className="text-xs text-green-400 mt-2">
-                      ✓ {pack.topics.length} temas disponíveis
+                      ✓ 10 Temas Gratuitos + 40 Premium
                     </p>
                   </button>
                 ))}
@@ -750,7 +750,7 @@ export default function GameContainer() {
               {defensor}, escolhe o tema do debate 🎤
             </p>
             <p className="text-xs text-green-400 font-bold mb-3 uppercase tracking-wider">
-              ✓ {allTopics.length} Temas Disponíveis
+              ✓ 10 Temas Gratuitos + 40 Premium
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
               {allTopics.map((topic, idx) => {

@@ -39,7 +39,6 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Estratégia "Network First" para a página principal e manifest
-  // Isto garante que as atualizações de código sejam detetadas imediatamente
   if (event.request.mode === 'navigate' || url.pathname.endsWith('manifest.json')) {
     event.respondWith(
       fetch(event.request)
@@ -50,7 +49,12 @@ self.addEventListener('fetch', (event) => {
           });
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => {
+          // Restaurar fallback offline para navegação
+          return caches.match(event.request).then(cached => {
+            return cached || caches.match(BASE_PATH + '/index.html');
+          });
+        })
     );
     return;
   }
