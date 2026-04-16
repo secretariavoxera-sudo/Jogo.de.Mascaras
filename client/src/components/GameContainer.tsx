@@ -711,7 +711,7 @@ export default function GameContainer() {
                       {pack.description}
                     </p>
                     <p className="text-xs text-green-400 mt-2">
-                      ✓ {pack.topics.length} temas disponíveis
+                      ✓ 10 Temas Gratuitos + 40 Premium
                     </p>
                   </button>
                 ))}
@@ -750,7 +750,7 @@ export default function GameContainer() {
               {defensor}, escolhe o tema do debate 🎤
             </p>
             <p className="text-xs text-green-400 font-bold mb-3 uppercase tracking-wider">
-              ✓ {allTopics.length} Temas Disponíveis
+              ✓ 10 Temas Gratuitos + 40 Premium
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
               {allTopics.map((topic, idx) => {
