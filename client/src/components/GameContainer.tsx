@@ -482,7 +482,7 @@ export default function GameContainer() {
         )}
         <div className="min-h-screen bg-background text-foreground flex flex-col">
           <div
-            className="h-40 flex items-center justify-center"
+            className="h-32 flex items-center justify-center"
             style={{
               background:
                 "linear-gradient(135deg, rgba(10,10,10,0.95), rgba(255,107,53,0.2))",
@@ -500,16 +500,9 @@ export default function GameContainer() {
               </p>
             </div>
           </div>
-          <div className="container py-8 flex-1">
-            <div className="max-w-2xl mx-auto">
+          <div className="container py-4 flex-1 flex flex-col">
+            <div className="max-w-2xl mx-auto flex flex-col flex-1 w-full">
               <div className="flex gap-2 mb-4">
-                <Button
-                  onClick={goToLanding}
-                  variant="outline"
-                  className="border-border text-muted-foreground hover:text-foreground"
-                >
-                  ← Voltar Atrás
-                </Button>
                 <Button
                   onClick={() => setShowInstructions(true)}
                   variant="outline"
@@ -623,6 +616,15 @@ export default function GameContainer() {
                   </p>
                 )}
               </Card>
+              <div className="flex justify-center mt-auto py-8">
+                <Button
+                  onClick={goToLanding}
+                  variant="outline"
+                  className="border-border text-muted-foreground hover:text-foreground"
+                >
+                  ← Voltar Atrás
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -668,16 +670,9 @@ export default function GameContainer() {
             </Card>
           </div>
         )}
-        <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-          <div className="max-w-2xl w-full">
-            <Button
-              onClick={() => setPhase("setup")}
-              variant="outline"
-              className="mb-4 border-border text-muted-foreground hover:text-foreground"
-            >
-              ← Voltar Atrás
-            </Button>
-            <Card className="bg-card border-border p-8">
+        <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4">
+          <div className="max-w-2xl w-full flex flex-col flex-1">
+            <Card className="bg-card border-border p-8 mt-auto mb-4">
               <h2
                 className="text-4xl font-bold mb-2 text-center"
                 style={{ fontFamily: "Playfair Display" }}
@@ -717,6 +712,15 @@ export default function GameContainer() {
                 ))}
               </div>
             </Card>
+            <div className="flex justify-center mt-auto py-8">
+              <Button
+                onClick={() => setPhase("setup")}
+                variant="outline"
+                className="border-border text-muted-foreground hover:text-foreground"
+              >
+                ← Voltar Atrás
+              </Button>
+            </div>
           </div>
         </div>
       </>
@@ -727,16 +731,9 @@ export default function GameContainer() {
   if (phase === "selectTopic" && selectedPack) {
     const allTopics = selectedPack.topics;
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-        <div className="max-w-2xl w-full">
-          <Button
-            onClick={() => setPhase("selectPack")}
-            variant="outline"
-            className="mb-4 border-border text-muted-foreground hover:text-foreground"
-          >
-            ← Voltar Atrás
-          </Button>
-          <Card className="bg-card border-border p-8">
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4">
+        <div className="max-w-2xl w-full flex flex-col flex-1">
+          <Card className="bg-card border-border p-8 mt-auto mb-4">
             <div className="flex items-center gap-3 mb-2">
               <span className="text-3xl">{selectedPack.emoji}</span>
               <h2
@@ -773,6 +770,15 @@ export default function GameContainer() {
               })}
             </div>
           </Card>
+          <div className="flex justify-center mt-auto py-8">
+            <Button
+              onClick={() => setPhase("selectPack")}
+              variant="outline"
+              className="border-border text-muted-foreground hover:text-foreground"
+            >
+              ← Voltar Atrás
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -781,16 +787,9 @@ export default function GameContainer() {
   // ─── ESCOLHER RESPOSTA SECRETA ────────────────────────────────────────────────
   if (phase === "chooseAnswer") {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <Button
-            onClick={() => setPhase("selectTopic")}
-            variant="outline"
-            className="mb-4 border-border text-muted-foreground hover:text-foreground"
-          >
-            ← Voltar Atrás
-          </Button>
-          <Card className="bg-card border-border p-8 text-center">
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4">
+        <div className="max-w-md w-full flex flex-col flex-1">
+          <Card className="bg-card border-border p-8 text-center mt-auto mb-4">
             <h2
               className="text-3xl font-bold mb-6"
               style={{ fontFamily: "Playfair Display" }}
@@ -819,6 +818,15 @@ export default function GameContainer() {
               </Button>
             </div>
           </Card>
+          <div className="flex justify-center mt-auto py-8">
+            <Button
+              onClick={() => setPhase("selectTopic")}
+              variant="outline"
+              className="border-border text-muted-foreground hover:text-foreground"
+            >
+              ← Voltar Atrás
+            </Button>
+          </div>
         </div>
       </div>
     );
