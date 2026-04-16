@@ -6,6 +6,14 @@
 dist/
 build/
 *.dist
+assets/
+index.html
+manifest.json
+sw.js
+favicon-32.png
+icon-192.png
+icon-512.png
+public_deploy/
 
 # Environment variables
 .env
@@ -110,3 +118,9 @@ temp/
 
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json
+__manus__/
+
+# Other artifacts
+*.md
+!README.md
+!AGENTS.md
