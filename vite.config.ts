@@ -156,7 +156,7 @@ const plugins = [
 ];
 
 export default defineConfig({
-  base: '/Jogo_de_Mascaras/',
+  base: './',
   plugins,
   resolve: {
     alias: {
