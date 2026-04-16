@@ -434,7 +434,7 @@ export default function GameContainer() {
             <p className="text-muted-foreground mb-10 text-sm">
               Um jogo de dedução social para 4 a 6 jogadores
               <br />
-              <span className="text-[10px] opacity-30 mt-2 block">v2.1.0</span>
+              <span className="text-[10px] opacity-30 mt-2 block">v2.2.0</span>
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
               <Button
