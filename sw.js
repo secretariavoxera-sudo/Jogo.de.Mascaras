@@ -1,12 +1,11 @@
 const CACHE_NAME = 'jogo-mascaras-v2';
-const BASE_PATH = '/Jogo_de_Mascaras';
 
 const STATIC_ASSETS = [
-  BASE_PATH + '/',
-  BASE_PATH + '/index.html',
-  BASE_PATH + '/icon-192.png',
-  BASE_PATH + '/icon-512.png',
-  BASE_PATH + '/manifest.json'
+  './',
+  'index.html',
+  'icon-192.png',
+  'icon-512.png',
+  'manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -52,7 +51,7 @@ self.addEventListener('fetch', (event) => {
         .catch(() => {
           // Restaurar fallback offline para navegação
           return caches.match(event.request).then(cached => {
-            return cached || caches.match(BASE_PATH + '/index.html');
+            return cached || caches.match('index.html');
           });
         })
     );

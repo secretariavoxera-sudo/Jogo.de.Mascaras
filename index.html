@@ -14,8 +14,8 @@
     <meta name="theme-color" content="#000000" />
 
     <!-- PWA -->
-    <link rel="manifest" href="/Jogo_de_Mascaras/manifest.json" />
-    <link rel="apple-touch-icon" href="/Jogo_de_Mascaras/icon-192.png" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
@@ -28,13 +28,13 @@
       rel="icon"
       type="image/png"
       sizes="32x32"
-      href="/Jogo_de_Mascaras/favicon-32.png"
+      href="./favicon-32.png"
     />
     <link
       rel="icon"
       type="image/png"
       sizes="192x192"
-      href="/Jogo_de_Mascaras/icon-192.png"
+      href="./icon-192.png"
     />
 
     <!-- Open Graph -->
@@ -43,7 +43,7 @@
       property="og:description"
       content="O jogo de debate social onde cada jogador esconde um papel secreto. Quem é o Infiltrado?"
     />
-    <meta property="og:image" content="/Jogo_de_Mascaras/icon-512.png" />
+    <meta property="og:image" content="./icon-512.png" />
     <meta property="og:type" content="website" />
 
     <!-- Google Analytics -->
@@ -59,15 +59,16 @@
       gtag("js", new Date());
       gtag("config", "G-YEFXZNX8QM");
     </script>
+    <script type="module" crossorigin src="./script.js"></script>
+    <link rel="stylesheet" crossorigin href="./style.css">
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
           navigator.serviceWorker
-            .register("/Jogo_de_Mascaras/sw.js")
+            .register("./sw.js")
             .then(function (reg) {
               console.log("SW registado:", reg.scope);
 
