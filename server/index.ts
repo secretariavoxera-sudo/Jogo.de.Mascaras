@@ -10,8 +10,8 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Serve static files from root (where artifacts are built)
-  const staticPath = path.resolve(__dirname, "..");
+  // Serve static files from 'dist' directory
+  const staticPath = path.resolve(__dirname, "../dist");
 
   app.use("/Jogo_de_Mascaras", express.static(staticPath));
 
