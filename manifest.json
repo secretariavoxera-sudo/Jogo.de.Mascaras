@@ -1,0 +1,27 @@
+{
+  "name": "Jogo de Máscaras",
+  "short_name": "Máscaras",
+  "description": "O jogo de debate social onde cada jogador esconde um papel secreto.",
+  "start_url": "/Jogo_de_Mascaras/",
+  "scope": "/Jogo_de_Mascaras/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#D4AF37",
+  "lang": "pt-PT",
+  "icons": [
+    {
+      "src": "/Jogo_de_Mascaras/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/Jogo_de_Mascaras/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment", "social"]
+}
